@@ -1,0 +1,65 @@
+package com.galaksiya.semanticweb.agent
+
+import com.galaksiya.muse.agent.memory.ShortMemory
+import com.galaksiya.muse.agent.task.model.TaskNode
+import com.galaksiya.muse.agent.task.model.Node.NodeOperationType;
+import com.galaksiya.semanticweb.Nothing
+import com.hp.hpl.jena.rdf.model.Model
+import com.hp.hpl.jena.rdf.model.ModelFactory
+import com.hp.hpl.jena.rdf.model.Resource
+import com.hp.hpl.jena.rdf.model.Statement
+import com.hp.hpl.jena.vocabulary.RDF
+
+abstract class GTask extends TaskNode{
+	String uri
+	String schema
+	String schemaLocation
+	Model schemaModel;
+
+
+	GTask(String name){
+		super(name)
+		//fetch uri of the ontologies used in the task
+		resolveGraphs()
+		SemanticBridgeInjector injector = new SemanticBridgeInjector(uri: uri, schema: schema)
+		injector.inject(ShortMemory.metaClass)
+	}
+
+	
+	public resolveGraphs(){
+		this.metaClass.classNode.annotations.each {
+			uri = it.getMembers().uri.getText()
+			schema = it.getMembers().schema.getText()
+			schemaLocation = it.getMembers().location.getText()
+		}
+		// initiate schema
+		this.schemaModel = ModelFactory.createOntologyModel();
+		if(schema != null){
+			FileReader reader = new FileReader(new File(schemaLocation))
+			this.schemaModel.read(reader,null,"N-TRIPLE")
+		}
+
+		logger.debug "Annotation resolved: uri: $uri, schema: $schema"
+		this.addBaseGraphURI(uri, null);
+	}
+
+	def propertyMissing(String name) {
+		logger.trace "Dynamic resource loading: $name"
+		String uri = schema+"#"+name
+		if(name == "NOT_THING")
+			return new Nothing()
+		else{
+			Resource rsc = this.schemaModel.getResource(uri)
+			Statement statement = rsc.getProperty(RDF.type)
+			if(statement != null && statement.getObject().equals(RDF.Property))
+				return this.schemaModel.getProperty(uri)
+			else
+				return rsc
+		}
+	}
+
+	@Override
+	public NodeOperationType getType() {
+		return NodeOperationType.COMPUTE;
+	}
+}

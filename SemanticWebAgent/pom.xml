@@ -1,0 +1,83 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>SemanticRole</groupId>
+  <artifactId>SemanticRole</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <description>Contains the infrastructure for the Evolutionary Role Model.</description>
+  <build>
+    <sourceDirectory>src</sourceDirectory>
+    <resources>
+      <resource>
+        <directory>src</directory>
+        <excludes>
+          <exclude>**/*.java</exclude>
+        </excludes>
+      </resource>
+    </resources>
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>2.3.2</version>
+        <configuration>
+          <source>1.7</source>
+          <target>1.7</target>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+  <dependencies>
+  	<dependency>
+  		<groupId>org.htmlparser</groupId>
+  		<artifactId>htmlparser</artifactId>
+  		<version>2.1</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>com.galaksiya</groupId>
+  		<artifactId>MuSE</artifactId>
+  		<version>0.0.1v20130401</version>
+  		<exclusions>
+  			<exclusion>
+  				<artifactId>arq</artifactId>
+  				<groupId>com.hp.hpl.jena</groupId>
+  			</exclusion>
+  			<exclusion>
+  				<artifactId>sdb</artifactId>
+  				<groupId>com.hp.hpl.jena</groupId>
+  			</exclusion>
+  			<exclusion>
+  				<artifactId>virt_jena</artifactId>
+  				<groupId>Virtuoso</groupId>
+  			</exclusion>
+  		</exclusions>
+  	</dependency>
+  	<dependency>
+  		<groupId>javax.mail</groupId>
+  		<artifactId>mail</artifactId>
+  		<version>1.4.6</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>org.apache.jena</groupId>
+  		<artifactId>jena-arq</artifactId>
+  		<version>2.10.1</version>
+  	</dependency>
+  </dependencies>
+  <repositories>
+	<repository>
+		<id>galaksiya</id>
+		<name>Galaksiya Repository</name>
+		<url>http://155.223.24.15/</url>
+	</repository>
+	</repositories>
+  <distributionManagement>
+		<!-- <repository> -->
+		<!-- <id>seagent-distribution-repo</id> -->
+		<!-- <name>Seagent Repository</name> -->
+		<!-- <url>ftp://seagent.ege.edu.tr/seagent/etmen/snapshots</url> -->
+		<!-- </repository> -->
+		<repository>
+			<id>galaksiya-distribution-repo</id>
+			<name>Galaksiya Repository</name>
+			<url>ftp://155.223.24.15/home/galaksiya-ftp</url>
+		</repository>
+	</distributionManagement>
+</project>
