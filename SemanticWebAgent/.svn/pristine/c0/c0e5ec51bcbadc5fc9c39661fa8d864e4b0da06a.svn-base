@@ -1,0 +1,165 @@
+package com.galaksiya.semanticweb.agent.lang
+
+// this is a DSLD file
+// start off creating a custom DSL Descriptor for your Groovy DSL
+// The following snippet adds the 'newProp' to all types that are a subtype of GroovyObjects
+
+
+/**
+ * CONCEPT MANAGEMENT CALLS
+ *  This contribution hovers the methods of concept create/update/delete to the OWLKnowledge instances.
+ *
+ *  Conditions;
+ *  1- currentType("OWLKnowledge") -> First check the instance
+ *  2- ~enclosingClosure() -> Second check it is not in a closure. This is required against the case of overlaps
+ *  3- enclosingClass(annotatedBy(name("Ontology") & hasAttribute(name("location") & bind(val:value()))) -> last fetch the
+ *  location of the domain ontology in order to generate method declarations.
+ *
+ */
+contribute(
+		currentType("com.hp.hpl.jena.rdf.model.Model") &
+		enclosingClass(subType("com.galaksiya.semanticweb.agent.GTask"))&
+		enclosingClass(annotatedBy(name("com.galaksiya.semanticweb.agent.Ontology") & hasAttribute(name("location") & bind(val:value())))))
+{
+	String uri = val.iterator().next()
+	if(uri!=null){
+		def names = parseOntClasses(uri).each {
+			//create method
+			method  name : "create" +it,
+					optionalParams: [indvId:String],
+					params: [statements:Closure],
+					type: "com.hp.hpl.jena.rdf.model.Resource",
+					provider : galaksiya(),
+					doc : documentation()
+			// TODO: may be delete and update methods can be inserted.
+		}
+	}
+}
+
+/** DATATYPE PROPERTY IN CLOSURE CALLS
+ * inside of the closure... Detect datatype properties to insert into ontology.
+ * Conditions: 
+ * 1- enclosingClosure() -> first it must be a closure 
+ * 2- enclosingCallDeclaringType('OWLKnowledge') -> the calling type must be an instance of OWLKnowledge
+ * 3- enclosingCall(bind(forName: name()) -> handle the name of method to parse name of concept
+ * 4- enclosingClass(annotatedBy(name("Ontology") & hasAttribute(name("location") & bind(location:value()))))
+ *    find Ontology annotation to get ontology uri from which the concepts will be parsed. 
+ */
+contribute(enclosingClosure() & enclosingCallDeclaringType("com.hp.hpl.jena.rdf.model.Model") &
+		enclosingClass(subType("com.galaksiya.semanticweb.agent.GTask"))&
+		enclosingCall(bind(forName: name()))& enclosingClass(annotatedBy(name("com.galaksiya.semanticweb.agent.Ontology") & hasAttribute(name("location") & bind(location:value())))))
+{
+	forName.each {
+		String currentConcept = it;
+		if(currentConcept.contains("create") || currentConcept.contains("update") || currentConcept.contains("delete")){
+			currentConcept = currentConcept.substring(6)
+			String path = location.iterator().next()
+			def propNames = parseDatatypeProperties(path, currentConcept)
+			propNames.each { df->
+				//declare method
+				method  name : df.key,
+						params: [value: df.value],
+						type: "com.hp.hpl.jena.rdf.model.Statement",
+						provider : galaksiya(),
+						doc : documentation()
+			}
+		}
+	}
+}
+
+/**
+ * In Task Concept Management
+ */
+contribute(
+		enclosingClass(subType("com.galaksiya.semanticweb.agent.GTask"))&
+		enclosingClass(annotatedBy(name("com.galaksiya.semanticweb.agent.Ontology") & hasAttribute(name("location") & bind(location:value()))))){
+			String path = location.iterator().next()
+
+			def names = parseOntClasses(path)
+			names.each {
+				//declare concepts
+				property name : it,
+						type: "com.hp.hpl.jena.rdf.model.Resource",
+						provider : galaksiya(),
+						doc : documentation()
+			}
+
+			def listOfProperties = parseDatatypeProperties(path)
+			listOfProperties.each {
+				property name : it.key,
+						type: "com.hp.hpl.jena.rdf.model.Property",
+						provider : galaksiya(),
+						doc : documentation()
+			}
+
+			property name : "NOT_THING",
+					type: "com.galaksiya.semanticweb.Condition",
+					provider : galaksiya(),
+					doc : documentation()
+		}
+
+def parseOntClasses(val) {
+	//String to be scanned to find the pattern.
+	FileReader fileReader = new FileReader(val)
+	def lines = fileReader.readLines()
+	List names = new ArrayList();
+	lines.each {
+		def strPattern = "<.*[#/](.*)> <.*[#/](.*)> <.*[#/](.*)> ."
+		def m = it =~ strPattern
+		if(m.matches()){
+			def subject = m.group(1)
+			def predicate = m.group(2)
+			def object = m.group(3)
+			if(predicate == "type" && object == "Class")
+				names.add(subject)
+		}
+	}
+	return names
+}
+
+def parseDatatypeProperties(path, String domain) {
+	//String to be scanned to find the pattern.
+	FileReader fileReader = new FileReader(path)
+	def lines = fileReader.readLines()
+	def map = [:];
+	lines.each {
+		def strPattern = "<.*[#/](.*)> <.*[#/](.*)> <.*[#/](.*)> ."
+		def m = it =~ strPattern
+		if(m.matches()){
+			def subject = m.group(1)
+			def predicate = m.group(2)
+			def object = m.group(3)
+			if(predicate == "domain" && object == domain){
+				map.put(subject, "String")
+			}
+		}
+	}
+	return map;
+}
+def parseDatatypeProperties(path) {
+	//String to be scanned to find the pattern.
+	FileReader fileReader = new FileReader(path)
+	def lines = fileReader.readLines()
+	def map = [:];
+	lines.each {
+		def strPattern = "<.*[#/](.*)> <.*[#/](.*)> <.*[#/](.*)> ."
+		def m = it =~ strPattern
+		if(m.matches()){
+			def subject = m.group(1)
+			def predicate = m.group(2)
+			def object = m.group(3)
+			if(predicate == "type" && ((object == "DatatypeProperty") || (object == "Property") )){
+				map.put(subject, "String")
+			}
+		}
+	}
+	return map;
+}
+
+public String galaksiya(){
+	return 'Galaksiya Bilişim Teknolojileri'
+}
+
+public String documentation() {
+	return 'This is dynamically bound method to handle concepts | properties defined in your domain ontology'
+}
